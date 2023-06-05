@@ -74,10 +74,10 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
 def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
     log_interval = 5
     
-    # TODO: model architecture...put in model file?
-    temperature = 0.8
+    # model settings
+    temperature = 0.8 #randomness in generating next token
     top_p = 0.95
-    max_gen_length = 256 #
+    max_gen_length = 256 #max length of response
     max_seq_len = 512 # max sequence length (context window, prompt + output)
 
     lm : LLaMA = init_model(tokenizer, max_seq_len, batch_size)
@@ -88,7 +88,8 @@ def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
     for epoch in range(num_epochs):
         for input, target in data: # input is List[str] of prompts
             optimizer.zero_grad()
-            output = lm.generate(input, max_gen_length, temperature, top_p)
+            output = lm.feed_forward(input, max_gen_length, temperature, top_p)
+            # TODO: only calculate loss on the unpadded part
             loss = criterion(output.view(-1, max_gen_length), target.view(-1))
             loss.backward()
             optimizer.step()
