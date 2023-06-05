@@ -71,14 +71,8 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     return LLaMA(model, tokenizer)
 
 
-def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
+def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_rate):
     log_interval = 5
-    
-    # model settings
-    temperature = 0.8 #randomness in generating next token
-    top_p = 0.95
-    max_gen_length = 256 #max length of response
-    max_seq_len = 512 # max sequence length (context window, prompt + output)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
@@ -121,6 +115,7 @@ if __name__ == '__main__':
     num_epochs = 50
     batch_size = 64
     learning_rate = 1e-3
+    max_seq_len = 512 # max sequence length (context window, prompt + output)
     
     train_model(tokenizer, train, num_epochs, batch_size, learning_rate)
 
