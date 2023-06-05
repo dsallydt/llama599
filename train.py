@@ -41,7 +41,32 @@ def load_data(batch_size=64):
 
     return train_loader, val_loader, vocab_size
 
+def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
+
+    # TODO: set the model architecture
+    dim = 2048
+    n_heads = 4
+    n_layers = 4
+    
+    # initialize random weights
+    params = {} #TODO:
+    
+    model_args: ModelArgs = ModelArgs(
+        max_seq_len=max_seq_len, max_batch_size=max_batch_size, **params
+    )
+    tokenizer = Tokenizer(model_path=tokenizer_path)
+    model_args.vocab_size = tokenizer.n_words
+    torch.set_default_tensor_type(torch.cuda.HalfTensor)
+    model = Transformer(model_args)
+    torch.set_default_tensor_type(torch.FloatTensor)
+    # model.load_state_dict(checkpoint, strict=False) # TODO: not sure if this is needed?
+    lm = LLaMA(model, tokenizer)
+    return lm
+    
 def train_model():
+    
+    tokenizer_path = "" 
+    
     # training hyperparameters
     num_epochs = 50
     batch_size = 64
@@ -52,19 +77,12 @@ def train_model():
     temperature = 0.8 
     top_p = 0.95
     max_gen_length = 256
-    dim = 2048
-    n_heads = 4
-    n_layers = 4
     max_seq_len = 512 # not sure
     
-    vocab_size = 32000 #TODO: this should be set by the Tokenizer automatically
     training_sample = 30000
-    
-    ckpt_dir = "" # checkpoint directory
-    tokenizer_path = "" 
 
     lm : LLaMA
-    lm = load(ckpt_dir, tokenizer_path, -1, -1, max_seq_len, batch_size)
+    lm = init_model(tokenizer_path, max_seq_len, batch_size)
     data = load_data(batch_size)
     
     criterion = nn.CrossEntropyLoss()
