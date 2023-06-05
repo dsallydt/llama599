@@ -56,8 +56,7 @@ def load_data(tokenizer):
 
     return train_loader, val_loader
 
-def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
-    tokenizer = Tokenizer(model_path=tokenizer_path)
+def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
         dim=128,
         n_layers=2,
@@ -72,16 +71,16 @@ def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
     return LLaMA(model, tokenizer)
 
 
-def train_model(tokenizer_path, data, num_epochs, batch_size, learning_rate):
+def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
     log_interval = 5
     
     # TODO: model architecture...put in model file?
     temperature = 0.8
     top_p = 0.95
     max_gen_length = 256 #
-    max_seq_len = 512 # not sure
+    max_seq_len = 512 # max sequence length (context window, prompt + output)
 
-    lm : LLaMA = init_model(tokenizer_path, max_seq_len, batch_size)
+    lm : LLaMA = init_model(tokenizer, max_seq_len, batch_size)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(lm.model.params, lr=learning_rate)
@@ -89,9 +88,9 @@ def train_model(tokenizer_path, data, num_epochs, batch_size, learning_rate):
     for epoch in range(num_epochs):
         for input, target in data: # input is List[str] of prompts
             optimizer.zero_grad()
-            output = lm.generate(input, max_gen_length, temperature, top_p) #TODO: should we use generate for FF?
-            loss = criterion(output.view(-1, max_gen_length), target.view(-1)) #TODO: 
-            loss.backward() #TODO:
+            output = lm.generate(input, max_gen_length, temperature, top_p)
+            loss = criterion(output.view(-1, max_gen_length), target.view(-1))
+            loss.backward()
             optimizer.step()
 
         print(f'Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}')
@@ -112,6 +111,6 @@ if __name__ == '__main__':
     batch_size = 64
     learning_rate = 1e-3
     
-    train_model(tokenizer_path, train, num_epochs, batch_size, learning_rate)
+    train_model(tokenizer, train, num_epochs, batch_size, learning_rate)
 
     
