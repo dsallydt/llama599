@@ -80,18 +80,27 @@ def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
     max_gen_length = 256 #max length of response
     max_seq_len = 512 # max sequence length (context window, prompt + output)
 
-    lm : LLaMA = init_model(tokenizer, max_seq_len, batch_size)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(lm.model.params, lr=learning_rate)
 
     for epoch in range(num_epochs):
-        for input, target in data: # input is List[str] of prompts
+        for batch in data: # input is List[str] of prompts
+            inputs = batch[:, :-1].to(device)
+            targets = batch[:, 1:].to(device)
             optimizer.zero_grad()
-            output = lm.feed_forward(input, max_gen_length, temperature, top_p)
-            # TODO: only calculate loss on the unpadded part
-            mask = (target != tokenizer.pad_id)
-            loss = criterion(output.view(-1, max_gen_length)[mask], target.view(-1)[mask])
+            mask = inputs != tokenizer.pad_id  # Exclude padding
+            mask = mask & torch.tril(torch.ones(targets.size(1), targets.size(1))).bool().to(
+                device)  # Exclude future history
+
+            outputs = lm.model(inputs)
+
+            logits_masked = outputs.masked_fill(~mask.unsqueeze(-1), float('-inf'))
+            targets_masked = targets.masked_fill(~mask, -100)
+
+            loss = criterion(logits_masked.view(-1, outputs.size(-1)), targets_masked.view(-1))
             loss.backward()
             optimizer.step()
 
