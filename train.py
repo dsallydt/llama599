@@ -54,47 +54,34 @@ def load_data(tokenizer):
     return train_loader, val_loader
 
 def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
-
-    # TODO: set the model architecture
-    dim = 2048
-    n_heads = 4
-    n_layers = 4
-    
-    # initialize random weights
-    params = {} #TODO:
-    
-    model_args: ModelArgs = ModelArgs(
-        max_seq_len=max_seq_len, max_batch_size=max_batch_size, **params
-    )
     tokenizer = Tokenizer(model_path=tokenizer_path)
-    model_args.vocab_size = tokenizer.n_words
+    model_args: ModelArgs = ModelArgs(
+        dim=2048,
+        n_layers=4,
+        n_heads=4,
+        max_seq_len=max_seq_len, 
+        max_batch_size=max_batch_size, 
+        vocab_size=tokenizer.n_words
+    )
     torch.set_default_tensor_type(torch.cuda.HalfTensor)
     model = Transformer(model_args)
     torch.set_default_tensor_type(torch.FloatTensor)
-    # model.load_state_dict(checkpoint, strict=False) # TODO: not sure if this is needed?
-    lm = LLaMA(model, tokenizer)
-    return lm
     
-def train_model():
+    # TODO: load state dict somewhere?
+    model.load_state_dict(checkpoint, strict=False)
     
-    tokenizer_path = "" 
+    return LLaMA(model, tokenizer)
     
-    # training hyperparameters
-    num_epochs = 50
-    batch_size = 64
-    learning_rate = 1e-3
+def train_model(tokenizer_path, data, num_epochs, batch_size, learning_rate):
     log_interval = 25
     
     # TODO: model architecture...put in model file?
-    temperature = 0.8 
+    temperature = 0.8
     top_p = 0.95
-    max_gen_length = 256
+    max_gen_length = 256 #
     max_seq_len = 512 # not sure
-    
-    training_sample = 30000
 
-    lm : LLaMA
-    lm = init_model(tokenizer_path, max_seq_len, batch_size)
+    lm : LLaMA = init_model(tokenizer_path, max_seq_len, batch_size)
     data = load_data(batch_size)
     
     criterion = nn.CrossEntropyLoss()
@@ -109,11 +96,22 @@ def train_model():
             optimizer.step()
 
         print(f'Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}')
-        torch.save(model.state_dict(), f'epoch{epoch}-language_model.pth')
-    torch.save(model.state_dict(), 'language_model.pth')
+        if epoch % log_interval == 0:
+            torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
+    
+    torch.save(lm.model.state_dict(), 'language_model.pth')
 
 
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
     train, val = load_data(tokenizer)
+    
+    # training hyperparameters
+    num_epochs = 50
+    batch_size = 64
+    learning_rate = 1e-3
+    
+    train_model(tokenizer_path, train, num_epochs, batch_size, learning_rate)
+
+    
