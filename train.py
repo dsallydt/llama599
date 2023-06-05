@@ -8,6 +8,8 @@ import torch.optim as optim
 
 from llama import ModelArgs, Transformer, Tokenizer, LLaMA
 
+PAD_ID = 0
+
 class LLMDataset(Dataset):
     def __init__(self, data, tokenizer):
         self.data = data
@@ -19,14 +21,14 @@ class LLMDataset(Dataset):
     def __getitem__(self, idx):
         item = self.data[idx]
         text = item['text']
-        tokens = self.tokenizer.tokenize(text)
-        token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
-        return token_ids
+        tokens = self.tokenizer.encode(text, bos=True, eos=False)
+        return tokens
+
 
 def pad_collate_fn(batch):
     # Pad sequences to have the same length
     batch = [torch.tensor(x) for x in batch]
-    batch = pad_sequence(batch, batch_first=True, padding_value=0)
+    batch = pad_sequence(batch, batch_first=True, padding_value=PAD_ID)
     return batch
 
 
@@ -46,6 +48,8 @@ def load_data(tokenizer):
 
     train_dataset = LLMDataset(train_data, tokenizer)
     val_dataset = LLMDataset(val_data, tokenizer)
+
+    print([x for x in val_dataset])
 
     train_loader = DataLoader(train_dataset, batch_size=64, collate_fn=pad_collate_fn, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=64, collate_fn=pad_collate_fn, shuffle=False)
@@ -74,7 +78,8 @@ def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
     # model.load_state_dict(checkpoint, strict=False) # TODO: not sure if this is needed?
     lm = LLaMA(model, tokenizer)
     return lm
-    
+
+
 def train_model():
     
     tokenizer_path = "" 
@@ -116,4 +121,5 @@ def train_model():
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
+    PAD_ID = tokenizer.pad_id
     train, val = load_data(tokenizer)
