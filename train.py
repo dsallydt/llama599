@@ -90,7 +90,8 @@ def train_model(tokenizer, data, num_epochs, batch_size, learning_rate):
             optimizer.zero_grad()
             output = lm.feed_forward(input, max_gen_length, temperature, top_p)
             # TODO: only calculate loss on the unpadded part
-            loss = criterion(output.view(-1, max_gen_length), target.view(-1))
+            mask = (target != tokenizer.pad_id)
+            loss = criterion(output.view(-1, max_gen_length)[mask], target.view(-1)[mask])
             loss.backward()
             optimizer.step()
 
