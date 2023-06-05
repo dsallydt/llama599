@@ -59,21 +59,21 @@ def load_data(tokenizer):
 def init_model(tokenizer_path, max_seq_len, max_batch_size) -> LLaMA:
     tokenizer = Tokenizer(model_path=tokenizer_path)
     model_args: ModelArgs = ModelArgs(
-        dim=2048,
-        n_layers=4,
-        n_heads=4,
+        dim=128,
+        n_layers=2,
+        n_heads=2,
         max_seq_len=max_seq_len, 
         max_batch_size=max_batch_size, 
         vocab_size=tokenizer.n_words
     )
     torch.set_default_tensor_type(torch.cuda.HalfTensor)
-    model = Transformer(model_args)
+    model = Transformer(model_args) # initialized with random weights
     torch.set_default_tensor_type(torch.FloatTensor)
     return LLaMA(model, tokenizer)
 
 
 def train_model(tokenizer_path, data, num_epochs, batch_size, learning_rate):
-    log_interval = 25
+    log_interval = 5
     
     # TODO: model architecture...put in model file?
     temperature = 0.8
@@ -82,7 +82,6 @@ def train_model(tokenizer_path, data, num_epochs, batch_size, learning_rate):
     max_seq_len = 512 # not sure
 
     lm : LLaMA = init_model(tokenizer_path, max_seq_len, batch_size)
-    data = load_data(batch_size)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(lm.model.params, lr=learning_rate)
