@@ -86,17 +86,48 @@ def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_r
             inputs = batch[:, :-1].to(device)
             targets = batch[:, 1:].to(device)
             optimizer.zero_grad()
-            mask = torch.tensor(np.array([np.array(inp != tokenizer.pad_id, dtype=bool) for inp in inputs]))# Exclude padding
+            # mask = torch.tensor(np.array([np.array(inp != tokenizer.pad_id, dtype=bool) for inp in inputs]))# Exclude padding
             # print(mask)
             # mask = torch.logical_and(mask, torch.tril(torch.ones(targets.size(1), targets.size(1))).bool().to(
             #     device))  # Exclude future history
 
-            outputs = lm.model(inputs)
+            min_prompt_size = min([len(t) for t in inputs])
+            max_prompt_size = max([len(t) for t in inputs])
 
-            logits_masked = outputs.masked_fill(~mask.unsqueeze(-1), float('-inf'))
-            targets_masked = targets.masked_fill(~mask, -100)
+            total_len = max_seq_len
 
-            loss = criterion(logits_masked.view(-1, outputs.size(-1)), targets_masked.view(-1))
+            tokens = torch.full((batch_size, total_len), tokenizer.pad_id).cuda().long()
+            for k, t in enumerate(inputs):
+                tokens[k, : len(t)] = torch.tensor(t).long()
+            input_text_mask = tokens != tokenizer.pad_id
+            start_pos = min_prompt_size
+            prev_pos = 0
+            
+            logits = lm.model.forward(tokens, 0)
+            
+            targets_masked = targets[input_text_mask]
+            loss = criterion(logits[input_text_mask].view(-1), targets_masked.view(-1))
+            
+            # for cur_pos in range(start_pos, total_len):
+            #     logits = lm.model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
+            #     # if temperature > 0:
+            #     #     probs = torch.softmax(logits / temperature, dim=-1)
+            #     #     next_token = sample_top_p(probs, top_p)
+            #     # else:
+            #     #     next_token = torch.argmax(logits, dim=-1)
+            #     # next_token = next_token.reshape(-1)
+            #     # only replace token if prompt has already been generated
+            #     next_token = torch.where(
+            #         input_text_mask[:, cur_pos], tokens[:, cur_pos], next_token
+            #     )
+            #     tokens[:, cur_pos] = next_token
+            #     prev_pos = cur_pos
+                
+            
+            # logits_masked = outputs.masked_fill(~mask.unsqueeze(-1), float('-inf'))
+            # targets_masked = targets.masked_fill(~mask, -100)
+
+            # loss = criterion(logits_masked.view(-1, outputs.size(-1)), targets_masked.view(-1))
             loss.backward()
             optimizer.step()
 
