@@ -21,7 +21,7 @@ class LLMDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        text = item#['text']
+        text = item['text']
         tokens = self.tokenizer.encode(text, bos=True, eos=False)
         return tokens
 
@@ -39,7 +39,7 @@ def pad_collate_fn(batch):
 
 
 def load_data(tokenizer, batch_size):
-    num_lines = 200
+    num_lines = 100000
     with open('00.jsonl', 'r') as f:
         data = [json.loads(next(f)) for _ in range(num_lines)]
 
@@ -55,7 +55,7 @@ def load_data(tokenizer, batch_size):
     train_dataset = LLMDataset(train_data, tokenizer)
     val_dataset = LLMDataset(val_data, tokenizer)
 
-    print([x for x in val_dataset])
+    # print([x for x in val_dataset])
 
     train_loader = DataLoader(train_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=False)
@@ -81,7 +81,7 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
             input_text_mask = inputs != tokenizer.pad_id #1 for valid entries, 0 else. no need since we pad with zeros
             
             output_logits = lm.model.forward(inputs, 0)
-            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.view(-1))
+            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
             
             loss.backward()
             optimizer.step()
@@ -95,7 +95,7 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
             inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
             targets = targets[:, :max_seq_len-1] 
             output_logits = lm.model.forward(inputs, 0)
-            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.view(-1))
+            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
     
     torch.save(lm.model.state_dict(), 'language_model.pth')
     return lm
@@ -114,26 +114,26 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     # torch.set_default_tensor_type(torch.FloatTensor)
     return LLaMA(model, tokenizer)
 
+
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
     # PAD_ID = tokenizer.pad_id # we pad with zero instead
     # training hyperparameters
     num_epochs = 50
-    batch_size = 1
+    batch_size = 64
     learning_rate = 1e-3
     max_seq_len = 256 # max sequence length (ie. prompt + output)
     
-    #train, val = load_data(tokenizer)
+    train, val = load_data(tokenizer, batch_size)
     
-    ######################### Sally's training with 2 samples
-    val = {}
-    train_data = [
-        "I believe the meaning of life is",
-        "Simply put, the theory of relativity states that ",
-    ]
-    train_dataset = LLMDataset(train_data, tokenizer)
-    train = DataLoader(train_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=True)
+    # val = {}
+    # train_data = [
+    #     "I believe the meaning of life is",
+    #     "Simply put, the theory of relativity states that ",
+    # ]
+    # train_dataset = LLMDataset(train_data, tokenizer)
+    # train = DataLoader(train_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=True)
     #########################
     
     lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
