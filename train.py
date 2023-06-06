@@ -39,15 +39,16 @@ def pad_collate_fn(batch):
 
 
 def load_data(tokenizer, batch_size):
-    num_lines = 100000
-    with open('00.jsonl', 'r') as f:
+    num_lines = 10000
+    with open('my-00.jsonl', 'r') as f:
         data = [json.loads(next(f)) for _ in range(num_lines)]
 
     train_data = data[:]
     print(f'Train data size: {len(train_data)}')
+    print([x for x in train_data[:2]])
 
-    with open('val.jsonl', 'r') as f:
-        data = [json.loads(next(f)) for _ in range(num_lines)]
+    # with open('val.jsonl', 'r') as f:
+    #     data = [json.loads(next(f)) for _ in range(num_lines)]
 
     val_data = data[:int(0.1 * len(data))]
     print(f'Val data size: {len(val_data)}')
@@ -62,11 +63,13 @@ def load_data(tokenizer, batch_size):
 
     return train_loader, val_loader
 
+
 def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learning_rate):
-    log_interval = 5
+    log_interval = 1
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
+    lm.model.to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(lm.model.parameters(), lr=learning_rate)
@@ -100,18 +103,19 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
     torch.save(lm.model.state_dict(), 'language_model.pth')
     return lm
 
+
 def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
-        dim=4,
+        dim=128,
         n_layers=2,
         n_heads=2,
         max_seq_len=max_seq_len, 
         max_batch_size=max_batch_size, 
         vocab_size=tokenizer.n_words
     )
-    # torch.set_default_tensor_type(torch.cuda.HalfTensor)
+    torch.set_default_tensor_type(torch.cuda.HalfTensor)
     model = Transformer(model_args) # initialized with random weights
-    # torch.set_default_tensor_type(torch.FloatTensor)
+    torch.set_default_tensor_type(torch.FloatTensor)
     return LLaMA(model, tokenizer)
 
 
@@ -120,8 +124,8 @@ if __name__ == '__main__':
     tokenizer = Tokenizer(model_path=tokenizer_path)
     # PAD_ID = tokenizer.pad_id # we pad with zero instead
     # training hyperparameters
-    num_epochs = 50
-    batch_size = 64
+    num_epochs = 20
+    batch_size = 128
     learning_rate = 1e-3
     max_seq_len = 256 # max sequence length (ie. prompt + output)
     
@@ -137,6 +141,7 @@ if __name__ == '__main__':
     #########################
     
     lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
+
 
 def test():
     prompts = [
