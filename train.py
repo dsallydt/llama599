@@ -91,10 +91,11 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
             torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
             
         # validation
-        # TODO: list of strings in input should be shorter? exactly equal? to max_seq_len? (max_seq_len) is used in model architecture
         for inputs, targets in val:
+            inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
+            targets = targets[:, :max_seq_len-1] 
             output_logits = lm.model.forward(inputs, 0)
-            loss = criterion(output_logits[input_text_mask].view(-1), targets.view(-1)) #TODO
+            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.view(-1))
     
     torch.save(lm.model.state_dict(), 'language_model.pth')
     return lm
