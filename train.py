@@ -131,15 +131,6 @@ if __name__ == '__main__':
     
     train, val = load_data(tokenizer, batch_size)
     
-    # val = {}
-    # train_data = [
-    #     "I believe the meaning of life is",
-    #     "Simply put, the theory of relativity states that ",
-    # ]
-    # train_dataset = LLMDataset(train_data, tokenizer)
-    # train = DataLoader(train_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=True)
-    #########################
-    
     lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
 
 
