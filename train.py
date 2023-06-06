@@ -21,7 +21,7 @@ class LLMDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        text = item['text']
+        text = item#['text']
         tokens = self.tokenizer.encode(text, bos=True, eos=False)
         return tokens
 
@@ -72,16 +72,16 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
     optimizer = optim.Adam(lm.model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
-        # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
         for inputs, targets in data:
+            inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
+            targets = targets[:, :max_seq_len-1]
             inputs = inputs.to(device)
             targets = targets.to(device)
             optimizer.zero_grad()
-            input_text_mask = inputs != tokenizer.pad_id
-            logits = lm.model.forward(inputs, 0)
+            input_text_mask = inputs != tokenizer.pad_id #1 for valid entries, 0 else. no need since we pad with zeros
             
-            #  targets_masked = targets[input_text_mask]
-            # loss = criterion(logits[input_text_mask].view(-1), targets_masked.view(-1))
+            output_logits = lm.model.forward(inputs, 0)
+            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.view(-1))
             
             loss.backward()
             optimizer.step()
@@ -116,14 +116,25 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
-    PAD_ID = tokenizer.pad_id
+    # PAD_ID = tokenizer.pad_id # we pad with zero instead
     # training hyperparameters
     num_epochs = 50
     batch_size = 1
     learning_rate = 1e-3
     max_seq_len = 256 # max sequence length (ie. prompt + output)
     
-    train, val = load_data(tokenizer)
+    #train, val = load_data(tokenizer)
+    
+    ######################### Sally's training with 2 samples
+    val = {}
+    train_data = [
+        "I believe the meaning of life is",
+        "Simply put, the theory of relativity states that ",
+    ]
+    train_dataset = LLMDataset(train_data, tokenizer)
+    train = DataLoader(train_dataset, batch_size, collate_fn=pad_collate_fn, shuffle=True)
+    #########################
+    
     lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
 
 def test():

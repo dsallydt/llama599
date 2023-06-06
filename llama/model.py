@@ -120,7 +120,6 @@ class Attention(nn.Module):
         bsz, seqlen, _ = x.shape
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
 
-        print(bsz, seqlen, self.n_local_heads, self.head_dim)
         xq = xq.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         xk = xk.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim)
@@ -228,7 +227,6 @@ class Transformer(nn.Module):
         _bsz, seqlen = tokens.shape
         h = self.tok_embeddings(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
-        print("dimension of self.freqs_cis: ", self.freqs_cis.shape)
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
 
         mask = None
