@@ -125,6 +125,9 @@ class Attention(nn.Module):
         xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim)
 
         xq, xk = apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
+        
+        xk = xk.to(xq)
+        xv = xv.to(xq)
 
         # self.cache_k = self.cache_k.to(xq)
         # self.cache_v = self.cache_v.to(xq)
@@ -226,6 +229,7 @@ class Transformer(nn.Module):
     def forward(self, tokens: torch.Tensor, start_pos: int):
         _bsz, seqlen = tokens.shape
         h = self.tok_embeddings(tokens)
+        h = h.to(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
 
