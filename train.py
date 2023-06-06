@@ -94,11 +94,17 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
             torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
             
         # validation
-        for inputs, targets in val:
-            inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
-            targets = targets[:, :max_seq_len-1] 
-            output_logits = lm.model.forward(inputs, 0)
-            loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
+        val_loss = 0.0
+        with torch.no_grad():
+            for inputs, targets in val:
+                inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
+                targets = targets[:, :max_seq_len-1] 
+                output_logits = lm.model.forward(inputs, 0)
+                loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
+                val_loss += loss.item()
+            # Calculate average validation loss and accuracy for the epoch
+            avg_val_loss = val_loss / len(val)
+            print(f'epoch {epoch} validation loss {avg_val_loss}')
     
     torch.save(lm.model.state_dict(), 'language_model.pth')
     return lm
