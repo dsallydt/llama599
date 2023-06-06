@@ -77,7 +77,7 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     return LLaMA(model, tokenizer)
 
 
-def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_rate):
+def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learning_rate):
     log_interval = 5
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -139,9 +139,13 @@ def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_r
         print(f'Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}')
         if epoch % log_interval == 0:
             torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
+            
+        # validation     
+        for inputs, targets in val:
+            output_logits = lm.model.forward(inputs, 0)
+            loss = criterion(logits[input_text_mask].view(-1), targets_masked.view(-1))
     
     torch.save(lm.model.state_dict(), 'language_model.pth')
-
 
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
@@ -155,6 +159,6 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     max_seq_len = 30 # max sequence length (context window, prompt + output)
     
-    train_model(tokenizer, train, max_seq_len, num_epochs, batch_size, learning_rate)
+    train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
 
     
