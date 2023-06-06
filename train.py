@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 import torch
@@ -58,16 +59,16 @@ def load_data(tokenizer):
 
 def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
-        dim=128,
+        dim=30,
         n_layers=2,
         n_heads=2,
         max_seq_len=max_seq_len, 
         max_batch_size=max_batch_size, 
         vocab_size=tokenizer.n_words
     )
-    torch.set_default_tensor_type(torch.cuda.HalfTensor)
+    # torch.set_default_tensor_type(torch.cuda.HalfTensor)
     model = Transformer(model_args) # initialized with random weights
-    torch.set_default_tensor_type(torch.FloatTensor)
+    # torch.set_default_tensor_type(torch.FloatTensor)
     return LLaMA(model, tokenizer)
 
 
@@ -78,16 +79,17 @@ def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_r
     lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
     
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(lm.model.params, lr=learning_rate)
+    optimizer = optim.Adam(lm.model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
         for batch in data: # input is List[str] of prompts
             inputs = batch[:, :-1].to(device)
             targets = batch[:, 1:].to(device)
             optimizer.zero_grad()
-            mask = inputs != tokenizer.pad_id  # Exclude padding
-            mask = mask & torch.tril(torch.ones(targets.size(1), targets.size(1))).bool().to(
-                device)  # Exclude future history
+            mask = torch.tensor(np.array([np.array(inp != tokenizer.pad_id, dtype=bool) for inp in inputs]))# Exclude padding
+            # print(mask)
+            # mask = torch.logical_and(mask, torch.tril(torch.ones(targets.size(1), targets.size(1))).bool().to(
+            #     device))  # Exclude future history
 
             outputs = lm.model(inputs)
 
@@ -117,6 +119,6 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     max_seq_len = 512 # max sequence length (context window, prompt + output)
     
-    train_model(tokenizer, train, num_epochs, batch_size, learning_rate)
+    train_model(tokenizer, train, max_seq_len, num_epochs, batch_size, learning_rate)
 
     

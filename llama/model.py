@@ -84,21 +84,21 @@ class Attention(nn.Module):
             args.dim,
             args.n_heads * self.head_dim,
             bias=False,
-            gather_output=False,
+            # gather_output=False,
             # init_method=lambda x: x,
         )
         self.wk = nn.Linear(
             args.dim,
             args.n_heads * self.head_dim,
             bias=False,
-            gather_output=False,
+            # gather_output=False,
             # init_method=lambda x: x,
         )
         self.wv = nn.Linear(
             args.dim,
             args.n_heads * self.head_dim,
             bias=False,
-            gather_output=False,
+            # gather_output=False,
             # init_method=lambda x: x,
         )
         self.wo = nn.Linear(
@@ -165,13 +165,13 @@ class FeedForward(nn.Module):
         hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
 
         self.w1 = nn.Linear(
-            dim, hidden_dim, bias=False, gather_output=False, # init_method=lambda x: x
+            dim, hidden_dim, bias=False, # gather_output=False, # init_method=lambda x: x
         )
         self.w2 = nn.Linear(
             hidden_dim, dim, bias=False, # input_is_parallel=True, # init_method=lambda x: x
         )
         self.w3 = nn.Linear(
-            dim, hidden_dim, bias=False, gather_output=False, # init_method=lambda x: x
+            dim, hidden_dim, bias=False, # gather_output=False, # init_method=lambda x: x
         )
 
     def forward(self, x):
