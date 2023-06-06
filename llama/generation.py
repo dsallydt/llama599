@@ -13,45 +13,6 @@ class LLaMA:
     def __init__(self, model: Transformer, tokenizer: Tokenizer):
         self.model = model
         self.tokenizer = tokenizer
-
-    def feed_forward(
-        self,
-        prompt_tokens: List[List[int]],
-        max_gen_len: int,
-        temperature: float = 0.8,
-        top_p: float = 0.95,
-    ) -> List[str]:
-        bsz = len(prompt_tokens) 
-        params = self.model.params
-        assert bsz <= params.max_batch_size, (bsz, params.max_batch_size)
-
-        min_prompt_size = min([len(t) for t in prompt_tokens])
-        max_prompt_size = max([len(t) for t in prompt_tokens])
-
-        total_len = min(params.max_seq_len, max_prompt_size + max_gen_len)
-
-        tokens = torch.full((bsz, total_len), self.tokenizer.pad_id).cuda().long()
-        for k, t in enumerate(prompt_tokens):
-            tokens[k, : len(t)] = torch.tensor(t).long()
-        input_text_mask = tokens != self.tokenizer.pad_id
-        start_pos = min_prompt_size
-        prev_pos = 0
-        for cur_pos in range(start_pos, total_len):
-            logits = self.model.forward(tokens[:, prev_pos:cur_pos], prev_pos)
-            if temperature > 0:
-                probs = torch.softmax(logits / temperature, dim=-1)
-                next_token = sample_top_p(probs, top_p)
-            else:
-                next_token = torch.argmax(logits, dim=-1)
-            next_token = next_token.reshape(-1)
-            # only replace token if prompt has already been generated
-            next_token = torch.where(
-                input_text_mask[:, cur_pos], tokens[:, cur_pos], next_token
-            )
-            tokens[:, cur_pos] = next_token
-            prev_pos = cur_pos
-
-        return tokens
     
     def generate(
         self,
