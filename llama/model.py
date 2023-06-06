@@ -120,6 +120,7 @@ class Attention(nn.Module):
         bsz, seqlen, _ = x.shape
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
 
+        print(bsz, seqlen, self.n_local_heads, self.head_dim)
         xq = xq.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         xk = xk.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         xv = xv.view(bsz, seqlen, self.n_local_heads, self.head_dim)
@@ -132,11 +133,11 @@ class Attention(nn.Module):
         # self.cache_k[:bsz, start_pos : start_pos + seqlen] = xk
         # self.cache_v[:bsz, start_pos : start_pos + seqlen] = xv
 
-        self.wk(x)[:bsz, start_pos : start_pos + seqlen] = xk
-        self.wv(x)[:bsz, start_pos : start_pos + seqlen] = xv
+        # self.wk(x)[:bsz, start_pos : start_pos + seqlen] = xk
+        # self.wv(x)[:bsz, start_pos : start_pos + seqlen] = xv
         
-        keys = self.wk(x)[:bsz, : start_pos + seqlen]
-        values = self.wv(x)[:bsz, : start_pos + seqlen]
+        keys = xk
+        values = xv
 
         xq = xq.transpose(1, 2)
         keys = keys.transpose(1, 2)
@@ -225,6 +226,7 @@ class Transformer(nn.Module):
     # @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int):
         _bsz, seqlen = tokens.shape
+        print(tokens.shape)
         h = self.tok_embeddings(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]

@@ -23,14 +23,19 @@ class LLMDataset(Dataset):
         item = self.data[idx]
         text = item['text']
         tokens = self.tokenizer.encode(text, bos=True, eos=False)
-        return tokens
+        return tokens[:29]
 
 
 def pad_collate_fn(batch):
     # Pad sequences to have the same length
-    batch = [torch.tensor(x) for x in batch]
-    batch = pad_sequence(batch, batch_first=True, padding_value=PAD_ID)
-    return batch
+    # batch = torch.tensor([torch.tensor(x) for x in batch])
+    inputs = [torch.tensor(x[:-1]) for x in batch]
+    targets = [torch.tensor(x[1:]) for x in batch]
+
+    inputs = pad_sequence(inputs, batch_first=True, padding_value=PAD_ID)
+    targets = pad_sequence(targets, batch_first=True, padding_value=PAD_ID)
+
+    return inputs, targets
 
 
 def load_data(tokenizer):
@@ -59,7 +64,7 @@ def load_data(tokenizer):
 
 def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
-        dim=30,
+        dim=32,
         n_layers=2,
         n_heads=2,
         max_seq_len=max_seq_len, 
@@ -82,9 +87,9 @@ def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_r
     optimizer = optim.Adam(lm.model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
-        for batch in data: # input is List[str] of prompts
-            inputs = batch[:, :-1].to(device)
-            targets = batch[:, 1:].to(device)
+        for inputs, targets in data: # input is List[str] of prompts
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             optimizer.zero_grad()
             # mask = torch.tensor(np.array([np.array(inp != tokenizer.pad_id, dtype=bool) for inp in inputs]))# Exclude padding
             # print(mask)
@@ -96,14 +101,14 @@ def train_model(tokenizer, data, max_seq_len, num_epochs, batch_size, learning_r
 
             total_len = max_seq_len
 
-            tokens = torch.full((batch_size, total_len), tokenizer.pad_id).cuda().long()
-            for k, t in enumerate(inputs):
-                tokens[k, : len(t)] = torch.tensor(t).long()
-            input_text_mask = tokens != tokenizer.pad_id
+            # tokens = torch.full((batch_size, total_len), tokenizer.pad_id).long()
+            # for k, t in enumerate(inputs):
+            #     tokens[k, : len(t)] = torch.tensor(t).long()
+            input_text_mask = inputs != tokenizer.pad_id
             start_pos = min_prompt_size
             prev_pos = 0
-            
-            logits = lm.model.forward(tokens, 0)
+
+            logits = lm.model.forward(inputs, 0)
             
             targets_masked = targets[input_text_mask]
             loss = criterion(logits[input_text_mask].view(-1), targets_masked.view(-1))
@@ -148,7 +153,7 @@ if __name__ == '__main__':
     num_epochs = 50
     batch_size = 64
     learning_rate = 1e-3
-    max_seq_len = 512 # max sequence length (context window, prompt + output)
+    max_seq_len = 30 # max sequence length (context window, prompt + output)
     
     train_model(tokenizer, train, max_seq_len, num_epochs, batch_size, learning_rate)
 
