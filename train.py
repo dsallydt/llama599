@@ -44,7 +44,6 @@ def load_data(tokenizer, batch_size):
 
     train_data = data[:]
     print(f'Train data size: {len(train_data)}')
-    print([x for x in train_data[:2]])
 
     with open('/content/drive/MyDrive/val.jsonl', 'r') as f:
         data = json.load(f)
@@ -64,14 +63,15 @@ def load_data(tokenizer, batch_size):
 
 
 def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learning_rate):
-    log_interval = 1
+    log_interval = 2
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
     lm.model.to(device)
     
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(lm.model.parameters(), lr=learning_rate)
+    optimizer = optim.AdamW(lm.model.parameters(), lr=learning_rate, betas=(0.9,0.95),weight_decay=0.1)
+    best_val_loss = 1e5
 
     for epoch in range(num_epochs):
         for inputs, targets in data:
@@ -88,21 +88,26 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
             loss.backward()
             optimizer.step()
 
-        print(f'Epoch: {epoch}/{num_epochs}, Loss: {loss.item()}')
-        if epoch % log_interval == 0:
-            torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
-            
+        print(f'Epoch: {epoch}/{num_epochs}, Train Loss: {loss.item()}')
         # validation
         val_loss = 0.0
         with torch.no_grad():
             for inputs, targets in val:
                 inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
                 targets = targets[:, :max_seq_len-1] 
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+
                 output_logits = lm.model.forward(inputs, 0)
                 loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
                 val_loss += loss.item()
             # Calculate average validation loss and accuracy for the epoch
             avg_val_loss = val_loss / len(val)
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                if epoch % log_interval == 0:
+                    torch.save(lm.model.state_dict(), f'epoch{epoch}-language_model.pth')
+                
             print(f'epoch {epoch} validation loss {avg_val_loss}')
     
     torch.save(lm.model.state_dict(), 'language_model.pth')
@@ -118,9 +123,9 @@ def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
         max_batch_size=max_batch_size, 
         vocab_size=tokenizer.n_words
     )
-    torch.set_default_tensor_type(torch.cuda.HalfTensor)
+    # torch.set_default_tensor_type(torch.cuda.HalfTensor)
     model = Transformer(model_args) # initialized with random weights
-    torch.set_default_tensor_type(torch.FloatTensor)
+    # torch.set_default_tensor_type(torch.FloatTensor)
     return LLaMA(model, tokenizer)
 
 
@@ -131,7 +136,7 @@ if __name__ == '__main__':
     # training hyperparameters
     num_epochs = 20
     batch_size = 64
-    learning_rate = 1e-3
+    learning_rate = 3e-4
     max_seq_len = 256 # max sequence length (ie. prompt + output)
     
     train, val = load_data(tokenizer, batch_size)
@@ -139,7 +144,7 @@ if __name__ == '__main__':
     lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
 
 
-def test():
+def test(lm : LLaMA):
     prompts = [
         # For these prompts, the expected answer is the natural continuation of the prompt
         "",
