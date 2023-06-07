@@ -1,7 +1,7 @@
-# LLaMA 
+# LLaMA Based Language Model Trainer
 
-This repository is intended as a minimal, hackable and readable example to load [LLaMA](https://ai.facebook.com/blog/large-language-model-llama-meta-ai/) ([arXiv](https://arxiv.org/abs/2302.13971v1)) models and run inference.
-In order to download the checkpoints and tokenizer, fill this [google form](https://forms.gle/jk851eBVbX1m5TAv5)
+Here is the checkpoint to our latest LM weights:
+https://drive.google.com/drive/folders/1mZa-d5s778GsnrLOsNEosquWDPvV0VUD?usp=share_link
 
 ## Setup
 

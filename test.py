@@ -36,15 +36,19 @@ def load(
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
-    checkpoint_path = "epoch6-language_model.pth"
+    checkpoint_path = "epoch9-language_model.pth"
     lm = load(checkpoint_path, tokenizer)
     
     prompts = [
         "",
+        #"My name is",
+        # "My name is ",
+        #"One plus one is equal to",
+        "I'm going out because",
         # For these prompts, the expected answer is the natural continuation of the prompt
-        "I believe the meaning of life is",
-        "Simply put, the theory of relativity states that",
-        "Building a website can be done in 10 simple steps:\n",
+        #"I believe the meaning of life is",
+        # "Simply put, the theory of relativity states that",
+        # "Building a website can be done in 10 simple steps:",
         # Few shot prompts: https://huggingface.co/blog/few-shot-learning-gpt-neo-and-inference-api
         # """Tweet: "I hate it when my phone battery dies."
         # Sentiment: Negative
@@ -57,15 +61,15 @@ if __name__ == '__main__':
         # ###
         # Tweet: "This new music video was incredibile"
         # Sentiment:""",
-        """Translate English to French:
-
-        sea otter => loutre de mer
-
-        peppermint => menthe poivrée
-
-        plush girafe => girafe peluche
-
-        cheese =>""",
+        # """Translate English to French:
+        #
+        # sea otter => loutre de mer
+        #
+        # peppermint => menthe poivrée
+        #
+        # plush girafe => girafe peluche
+        #
+        # cheese =>""",
     ]
     
     results = lm.generate(prompts, max_gen_len=32, temperature=0.8, top_p=0.95)
