@@ -62,11 +62,12 @@ def load_data(tokenizer, batch_size):
     return train_loader, val_loader
 
 
-def train_model(tokenizer, data, val, max_seq_len, num_epochs, learning_rate):
+def train_model(tokenizer, data, val, num_epochs, learning_rate):
     log_interval = 2
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    lm: LLaMA = init_model(tokenizer, max_seq_len)
+    lm: LLaMA = init_model(tokenizer)
+    max_seq_len = lm.model.params.max_seq_len
     lm.model.to(device)
     
     criterion = nn.CrossEntropyLoss()
@@ -74,7 +75,7 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, learning_rate):
     best_val_loss = 1e5
 
     for epoch in range(num_epochs):
-        val_loss = 0
+        train_loss = 0
         for inputs, targets in data:
             inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
             targets = targets[:, :max_seq_len-1]
@@ -85,11 +86,11 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, learning_rate):
             
             output_logits = lm.model.forward(inputs, 0)
             loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
-            val_loss += loss.item()
+            train_loss += loss.item()
             loss.backward()
             optimizer.step()
 
-        print(f'Epoch: {epoch}/{num_epochs}, Train Loss: {val_loss / len(data)}')
+        print(f'Epoch: {epoch}/{num_epochs}, Train Loss: {train_loss / len(data)}')
         # validation
         val_loss = 0.0
         with torch.no_grad():
@@ -120,7 +121,7 @@ def init_model(tokenizer, max_seq_len) -> LLaMA:
         dim=128,
         n_layers=2,
         n_heads=2,
-        max_seq_len=max_seq_len,
+        max_seq_len=64, # max sequence length (ie. prompt + output)
         vocab_size=tokenizer.n_words
     )
     # torch.set_default_tensor_type(torch.cuda.HalfTensor)
@@ -137,8 +138,7 @@ if __name__ == '__main__':
     num_epochs = 20
     batch_size = 64
     learning_rate = 3e-4
-    max_seq_len = 256 # max sequence length (ie. prompt + output)
     
     train, val = load_data(tokenizer, batch_size)
     
-    lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, learning_rate)
+    lm = train_model(tokenizer, train, val, num_epochs, learning_rate)

@@ -13,17 +13,16 @@ from llama import ModelArgs, Transformer, Tokenizer, LLaMA
 def load(
     ckpt_path: str,
     tokenizer: Tokenizer,
-    max_seq_len: int,
 ) -> LLaMA:
     start_time = time.time()
     print("Loading")
     checkpoint = torch.load(ckpt_path, map_location="cpu")
 
     model_args: ModelArgs = ModelArgs(
-        dim=256,
-        n_layers=3,
-        n_heads=4,
-        max_seq_len=max_seq_len,
+        dim=512,
+        n_layers=8,
+        n_heads=8,
+        max_seq_len=64,
         vocab_size=tokenizer.n_words
     )
     model = Transformer(model_args)
@@ -37,10 +36,11 @@ def load(
 if __name__ == '__main__':
     tokenizer_path = './tokenizer.model'
     tokenizer = Tokenizer(model_path=tokenizer_path)
-    checkpoint_path = "epoch2-language_model.pth"
-    lm = load(checkpoint_path, tokenizer, max_seq_len=256)
+    checkpoint_path = "epoch6-language_model.pth"
+    lm = load(checkpoint_path, tokenizer)
     
     prompts = [
+        "",
         # For these prompts, the expected answer is the natural continuation of the prompt
         "I believe the meaning of life is",
         "Simply put, the theory of relativity states that",
