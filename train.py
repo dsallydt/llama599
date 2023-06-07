@@ -62,11 +62,11 @@ def load_data(tokenizer, batch_size):
     return train_loader, val_loader
 
 
-def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learning_rate):
+def train_model(tokenizer, data, val, max_seq_len, num_epochs, learning_rate):
     log_interval = 2
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    lm: LLaMA = init_model(tokenizer, max_seq_len, batch_size)
+    lm: LLaMA = init_model(tokenizer, max_seq_len)
     lm.model.to(device)
     
     criterion = nn.CrossEntropyLoss()
@@ -74,21 +74,22 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
     best_val_loss = 1e5
 
     for epoch in range(num_epochs):
+        val_loss = 0
         for inputs, targets in data:
             inputs = inputs[:, :max_seq_len-1]  # need to chop inputs, targets to max_seq_len-1 length (because 1 of their tokens have already been dropped)
             targets = targets[:, :max_seq_len-1]
             inputs = inputs.to(device)
             targets = targets.to(device)
             optimizer.zero_grad()
-            input_text_mask = inputs != tokenizer.pad_id #1 for valid entries, 0 else. no need since we pad with zeros
+            # input_text_mask = inputs != tokenizer.pad_id # 1 for valid entries, 0 else. no need since we pad with zeros
             
             output_logits = lm.model.forward(inputs, 0)
             loss = criterion(output_logits.view(-1, output_logits.shape[2]), targets.reshape(-1))
-            
+            val_loss += loss.item()
             loss.backward()
             optimizer.step()
 
-        print(f'Epoch: {epoch}/{num_epochs}, Train Loss: {loss.item()}')
+        print(f'Epoch: {epoch}/{num_epochs}, Train Loss: {val_loss / len(data)}')
         # validation
         val_loss = 0.0
         with torch.no_grad():
@@ -114,13 +115,12 @@ def train_model(tokenizer, data, val, max_seq_len, num_epochs, batch_size, learn
     return lm
 
 
-def init_model(tokenizer, max_seq_len, max_batch_size) -> LLaMA:
+def init_model(tokenizer, max_seq_len) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
         dim=128,
         n_layers=2,
         n_heads=2,
-        max_seq_len=max_seq_len, 
-        max_batch_size=max_batch_size, 
+        max_seq_len=max_seq_len,
         vocab_size=tokenizer.n_words
     )
     # torch.set_default_tensor_type(torch.cuda.HalfTensor)
