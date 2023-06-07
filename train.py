@@ -116,7 +116,7 @@ def train_model(tokenizer, data, val, num_epochs, learning_rate):
     return lm
 
 
-def init_model(tokenizer, max_seq_len) -> LLaMA:
+def init_model(tokenizer) -> LLaMA:
     model_args: ModelArgs = ModelArgs(
         dim=128,
         n_layers=2,
