@@ -1,0 +1,38 @@
+import matplotlib.pyplot as plt
+
+# Sample data
+x = range(20)
+y = [5.603787015421322,
+5.206922317846134,
+5.018059899631781,
+4.917389228321112,
+4.849976315665931,
+4.808777700978727,
+4.777887828814717,
+4.758142826275323,
+4.737343873459691,
+4.7204296413701945,
+4.714791115099629,
+4.707753402356523,
+4.69853168249892,
+4.691034320063484,
+4.683136825744336,
+4.684751592885953,
+4.67945709167578,
+4.679069701855937,
+4.679853960348013,
+4.674612646285718]
+
+
+# Create the line plot
+plt.plot(x, y)
+
+# Set labels and title
+plt.xlabel('epoch')
+plt.xticks(range(1, len(x) + 1))
+plt.ylabel('validation loss')
+plt.title('Validation loss at epochs')
+
+# Display the plot with automatic axis scaling
+plt.tight_layout()
+plt.show()
