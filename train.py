@@ -39,18 +39,17 @@ def pad_collate_fn(batch):
 
 
 def load_data(tokenizer, batch_size):
-    num_lines = 10000
-    with open('my-00.jsonl', 'r') as f:
-        data = [json.loads(next(f)) for _ in range(num_lines)]
+    with open('/content/drive/MyDrive/ny-00.jsonl', 'r') as f:
+        data = json.load(f)
 
     train_data = data[:]
     print(f'Train data size: {len(train_data)}')
     print([x for x in train_data[:2]])
 
-    # with open('val.jsonl', 'r') as f:
-    #     data = [json.loads(next(f)) for _ in range(num_lines)]
+    with open('/content/drive/MyDrive/val.jsonl', 'r') as f:
+        data = json.load(f)
 
-    val_data = data[:int(0.1 * len(data))]
+    val_data = data[:]
     print(f'Val data size: {len(val_data)}')
 
     train_dataset = LLMDataset(train_data, tokenizer)
@@ -131,7 +130,7 @@ if __name__ == '__main__':
     # PAD_ID = tokenizer.pad_id # we pad with zero instead
     # training hyperparameters
     num_epochs = 20
-    batch_size = 128
+    batch_size = 64
     learning_rate = 1e-3
     max_seq_len = 256 # max sequence length (ie. prompt + output)
     
