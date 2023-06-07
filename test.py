@@ -14,7 +14,6 @@ def load(
     ckpt_path: str,
     tokenizer: Tokenizer,
     max_seq_len: int,
-    max_batch_size: int,
 ) -> LLaMA:
     start_time = time.time()
     print("Loading")

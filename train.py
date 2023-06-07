@@ -141,4 +141,4 @@ if __name__ == '__main__':
     
     train, val = load_data(tokenizer, batch_size)
     
-    lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, batch_size, learning_rate)
+    lm = train_model(tokenizer, train, val, max_seq_len, num_epochs, learning_rate)
